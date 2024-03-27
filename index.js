@@ -1,7 +1,27 @@
 const express = require("express");
+const morgan = require("morgan");
 const app = express();
 
 app.use(express.json());
+
+morgan.token("data", (req, res) => {
+  return JSON.stringify(req.body);
+});
+
+const morganOptions = (req, res, next) => {
+  if (req.method === "POST") {
+    morgan(
+      ":method :url :status :res[content-length] - :response-time ms :data"
+    )(req, res, next);
+  } else {
+    morgan("tiny")(req, res, next);
+  }
+};
+
+app.use(morganOptions);
+
+const morganString =
+  "function logger (req, res, next) {\n    // request data\n    req._startAt = undefined\n    req._startTime = undefined\n    req._remoteAddress = getip(req)\n\n    // response data\n    res._startAt = undefined\n    res._startTime = undefined\n\n    // record request start\n    recordStartTime.call(req)\n\n    function logRequest () {\n      if (skip !== false && skip(req, res)) {\n        debug('skip request')\n        return\n      }\n\n      var line = formatLine(morgan, req, res)\n\n      if (line == null) {\n        debug('skip line')\n        return\n      }\n\n      debug('log request')\n      stream.write(line + '\\n')\n    };\n\n    if (immediate) {\n      // immediate log\n      logRequest()\n    } else {\n      // record response start\n      onHeaders(res, recordStartTime)\n\n      // log when response finished\n      onFinished(res, logRequest)\n    }\n\n    next()\n  }";
 
 let persons = [
   {
@@ -27,6 +47,7 @@ let persons = [
 ];
 
 app.get("/api/persons", (request, response) => {
+  console.log(request.headers);
   response.json(persons);
 });
 
@@ -87,6 +108,7 @@ app.post("/api/persons", (req, res) => {
   };
 
   persons = persons.concat(person);
+  console.log(req.body);
 
   res.json(persons);
 });
