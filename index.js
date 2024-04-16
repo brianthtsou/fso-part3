@@ -1,8 +1,11 @@
 const express = require("express");
 const morgan = require("morgan");
+const cors = require("cors");
 const app = express();
 
 app.use(express.json());
+app.use(cors());
+app.use(express.static("dist"));
 
 morgan.token("data", (req, res) => {
   return JSON.stringify(req.body);
@@ -47,7 +50,7 @@ app.get("/api/persons", (request, response) => {
   response.json(persons);
 });
 
-app.get("/api/info", (request, response) => {
+app.get("/api/persons/info", (request, response) => {
   const numPeople = persons.length;
   const currentDate = new Date();
   const utcString = currentDate.toISOString();
@@ -108,7 +111,8 @@ app.post("/api/persons", (req, res) => {
   res.json(persons);
 });
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
