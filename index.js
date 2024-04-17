@@ -1,7 +1,9 @@
+require("dotenv").config();
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 const app = express();
+const PhoneNumber = require("./models/phonenumber");
 
 app.use(express.json());
 app.use(cors());
@@ -23,35 +25,23 @@ const morganOptions = (req, res, next) => {
 
 app.use(morganOptions);
 
-let persons = [
-  {
-    id: 1,
-    name: "Arto Hellas",
-    number: "040-123456",
-  },
-  {
-    id: 2,
-    name: "Ada Lovelace",
-    number: "39-44-5323523",
-  },
-  {
-    id: 3,
-    name: "Dan Abramov",
-    number: "12-43-234345",
-  },
-  {
-    id: 4,
-    name: "Mary Poppendieck",
-    number: "39-23-6423122",
-  },
-];
+// const requestLogger = (request, response, next) => {
+//   console.log("Method:", request.method);
+//   console.log("Path:  ", request.path);
+//   console.log("Body:  ", request.body);
+//   console.log("---");
+//   next();
+// };
+// app.use(requestLogger);
 
 app.get("/api/persons", (request, response) => {
-  response.json(persons);
+  PhoneNumber.find({}).then((phonenumbers) => {
+    response.json(phonenumbers);
+  });
 });
 
-app.get("/api/persons/info", (request, response) => {
-  const numPeople = persons.length;
+app.get("/api/persons/info", async (request, response) => {
+  const numPeople = await PhoneNumber.countDocuments();
   const currentDate = new Date();
   const utcString = currentDate.toISOString();
   response.send(
@@ -59,14 +49,20 @@ app.get("/api/persons/info", (request, response) => {
   );
 });
 
-app.get("/api/persons/:id", (req, res) => {
-  const id = Number(req.params.id);
-  const person = persons.find((person) => person.id === id);
-  if (person) {
-    res.json(person);
-  } else {
-    res.status(404).end();
-  }
+app.get("/api/persons/:id", (request, response) => {
+  PhoneNumber.findById(request.params.id)
+    .then((phonenumber) => {
+      if (!phonenumber) {
+        return response
+          .status(404)
+          .send({ message: "Phone number not found." });
+      }
+      response.json(phonenumber);
+    })
+    .catch((error) => {
+      console.error("Error retrieving the phone number", error);
+      response.status(500).send({ message: "Error retrieving phone number" });
+    });
 });
 
 app.delete("/api/persons/:id", (req, res) => {
@@ -111,7 +107,7 @@ app.post("/api/persons", (req, res) => {
   res.json(persons);
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
