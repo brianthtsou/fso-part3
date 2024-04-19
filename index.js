@@ -65,10 +65,14 @@ app.get("/api/persons/:id", (request, response) => {
     });
 });
 
-app.delete("/api/persons/:id", (req, res) => {
-  const id = Number(req.params.id);
-  persons = persons.filter((person) => person.id !== id);
-  res.status(204).end();
+app.delete("/api/persons/:id", (req, res, next) => {
+  PhoneNumber.findByIdAndDelete(req.params.id)
+    .then((result) => {
+      res.status(204).end();
+    })
+    .catch((error) => {
+      next(error);
+    });
 });
 
 const generateId = () => {
@@ -79,32 +83,34 @@ const generateId = () => {
 
 app.post("/api/persons", (req, res) => {
   const body = req.body;
-
   if (!body.name || !body.number) {
     return res.status(400).json({
       error: "content missing",
     });
   }
 
-  const match = persons.find((person) => {
-    return body.name.toLowerCase() === person.name.toLowerCase();
-  });
-
-  if (match) {
-    return res.status(409).json({
-      error: "name must be unique",
-    });
-  }
-
-  const person = {
-    id: generateId(),
+  const person = new PhoneNumber({
     name: body.name,
     number: body.number,
-  };
+  });
 
-  persons = persons.concat(person);
-
-  res.json(persons);
+  const match = PhoneNumber.find({ name: { $eq: body.name } })
+    .then((found) => {
+      // found is an array
+      if (found !== undefined && found.length > 0) {
+        return res.status(409).json({
+          error: "name must be unique",
+        });
+      } else {
+        person.save().then((savedPhoneNumber) => {
+          res.json(savedPhoneNumber);
+        });
+      }
+    })
+    .catch((error) => {
+      console.error("Issue with adding new phone number", error);
+      res.status(500).json({ error: "Internal server error" });
+    });
 });
 
 const PORT = process.env.PORT;
