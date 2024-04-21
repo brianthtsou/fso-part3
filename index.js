@@ -93,7 +93,7 @@ const generateId = () => {
   return maxId + 1;
 };
 
-app.post("/api/persons", (req, res) => {
+app.post("/api/persons", (req, res, next) => {
   const body = req.body;
   if (!body.name || !body.number) {
     return res.status(400).json({
@@ -106,22 +106,28 @@ app.post("/api/persons", (req, res) => {
     number: body.number,
   });
 
-  const match = PhoneNumber.find({ name: { $eq: body.name } })
-    .then((found) => {
-      // found is an array
-      if (found !== undefined && found.length > 0) {
-        return res.status(409).json({
-          error: "name must be unique",
-        });
-      } else {
-        person.save().then((savedPhoneNumber) => {
-          res.json(savedPhoneNumber);
-        });
-      }
+  person
+    .save()
+    .then((savedPhoneNumber) => {
+      res.json(savedPhoneNumber);
     })
     .catch((error) => {
       next(error);
     });
+});
+
+app.put("/api/persons/:id", (request, response, next) => {
+  const body = request.body;
+  const person = {
+    name: body.name,
+    number: body.number,
+  };
+
+  PhoneNumber.findByIdAndUpdate(request.params.id, person, { new: true })
+    .then((updatedPhoneNumber) => {
+      response.json(updatedPhoneNumber);
+    })
+    .catch((error) => next(error));
 });
 
 app.use(unknownEndpoint);
