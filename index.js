@@ -1,25 +1,24 @@
-require("dotenv").config();
-const express = require("express");
-const morgan = require("morgan");
-const cors = require("cors");
-const app = express();
-const PhoneNumber = require("./models/phonenumber");
+require('dotenv').config();
+const express = require('express');
+const morgan = require('morgan');
+const cors = require('cors');
 
-app.use(express.static("dist"));
+const app = express();
+const PhoneNumber = require('./models/phonenumber');
+
+app.use(express.static('dist'));
 app.use(express.json());
 app.use(cors());
 
-morgan.token("data", (req, res) => {
-  return JSON.stringify(req.body);
-});
+morgan.token('data', (req) => JSON.stringify(req.body));
 
 const morganOptions = (req, res, next) => {
-  if (req.method === "POST") {
+  if (req.method === 'POST') {
     morgan(
-      ":method :url :status :res[content-length] - :response-time ms :data"
+      ':method :url :status :res[content-length] - :response-time ms :data'
     )(req, res, next);
   } else {
-    morgan("tiny")(req, res, next);
+    morgan('tiny')(req, res, next);
   }
 };
 
@@ -29,9 +28,10 @@ app.use(morganOptions);
 const errorHandler = (error, request, response, next) => {
   console.error(error.message);
 
-  if (error.name === "CastError") {
-    return response.status(400).send({ error: "malformatted id" });
-  } else if (error.name === "ValidationError") {
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' });
+  }
+  if (error.name === 'ValidationError') {
     return response.status(400).json({ error: error.message });
   }
   next(error);
@@ -39,16 +39,16 @@ const errorHandler = (error, request, response, next) => {
 
 // handler of requests with unknown endpoint
 const unknownEndpoint = (request, response) => {
-  response.status(404).send({ error: "unknown endpoint" });
+  response.status(404).send({ error: 'unknown endpoint' });
 };
 
-app.get("/api/persons", (request, response) => {
+app.get('/api/persons', (request, response) => {
   PhoneNumber.find({}).then((phonenumbers) => {
     response.json(phonenumbers);
   });
 });
 
-app.get("/api/persons/info", async (request, response) => {
+app.get('/api/persons/info', async (request, response) => {
   const numPeople = await PhoneNumber.countDocuments();
   const currentDate = new Date();
   const utcString = currentDate.toISOString();
@@ -57,22 +57,22 @@ app.get("/api/persons/info", async (request, response) => {
   );
 });
 
-app.get("/api/persons/:id", (request, response, next) => {
+app.get('/api/persons/:id', (request, response, next) => {
   PhoneNumber.findById(request.params.id)
     .then((phonenumber) => {
       if (!phonenumber) {
         return response
           .status(404)
-          .send({ message: "Phone number not found." });
+          .send({ message: 'Phone number not found.' });
       }
       response.json(phonenumber);
     })
     .catch((error) => next(error));
 });
 
-app.delete("/api/persons/:id", (req, res, next) => {
+app.delete('/api/persons/:id', (req, res, next) => {
   PhoneNumber.findByIdAndDelete(req.params.id)
-    .then((result) => {
+    .then((res) => {
       res.status(204).end();
     })
     .catch((error) => {
@@ -80,17 +80,11 @@ app.delete("/api/persons/:id", (req, res, next) => {
     });
 });
 
-const generateId = () => {
-  const maxId =
-    persons.length > 0 ? Math.max(...persons.map((person) => person.id)) : 0;
-  return maxId + 1;
-};
-
-app.post("/api/persons", (req, res, next) => {
-  const body = req.body;
+app.post('/api/persons', (req, res, next) => {
+  const { body } = req;
   if (!body.name || !body.number) {
     return res.status(400).json({
-      error: "content missing",
+      error: 'content missing',
     });
   }
 
@@ -109,8 +103,8 @@ app.post("/api/persons", (req, res, next) => {
     });
 });
 
-app.put("/api/persons/:id", (request, response, next) => {
-  const body = request.body;
+app.put('/api/persons/:id', (request, response, next) => {
+  const { body } = request;
   const person = {
     name: body.name,
     number: body.number,
@@ -119,7 +113,7 @@ app.put("/api/persons/:id", (request, response, next) => {
   PhoneNumber.findByIdAndUpdate(request.params.id, person, {
     new: true,
     runValidators: true,
-    context: "query",
+    context: 'query',
   })
     .then((updatedPhoneNumber) => {
       response.json(updatedPhoneNumber);
@@ -131,7 +125,7 @@ app.use(unknownEndpoint);
 
 app.use(errorHandler);
 
-const PORT = process.env.PORT;
+const { PORT } = process.env;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
